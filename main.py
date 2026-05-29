@@ -1,6 +1,6 @@
 import os
 from dotenv import load_dotenv
-from project.coordinator import ResearchCoordinator
+from coordinator import ResearchCoordinator
 
 load_dotenv()
 OPENAI_API_KEY=os.getenv("OPENAI_API_KEY")
@@ -23,7 +23,7 @@ async def main()->None:
         return
     
     research_codinate=ResearchCoordinator(query)
-    report = await research_codinate.reserch()
+    report = await research_codinate.research()
 
 if __name__=="__main__":
     asyncio.run(main())

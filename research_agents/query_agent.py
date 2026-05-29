@@ -1,8 +1,9 @@
-from agents import Agent, Runner
-from pyadntic import BaseModel
+from agents import Agent
+from pydantic import BaseModel
 
-class QueryPattern:
-    thinking_procces: str
+
+class QueryPattern(BaseModel):
+    thinking_process: str
     queries: list[str]
 
 Query_Agent_prompt="""
@@ -22,8 +23,8 @@ for each topic follow the following steps:
 always provide both your thinking process and the generated 3 queries
 """
 
-query_agent= Agent(
+query_agent = Agent(
     name="query generator agent",
-    instructions=Query_Agent_prompt
-    output_type=QueryPattern
+    instructions=Query_Agent_prompt,
+    output_type=QueryPattern,
 )
