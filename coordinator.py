@@ -1,5 +1,4 @@
-from datetime import time
-
+import time
 from agents import trace, Runner
 from research_agents.query_agent import QueryPattern, query_agent
 from research_agents.search_agent import search_agent
@@ -21,11 +20,19 @@ class SearchResult(BaseModel):
 class ResearchCoordinator:
     def __init__(self, query:str):
         self.query=query
+        self.search_results = []
     
     async def research(self)->str:
         with trace("deep research workflow"):
             query_response = await self.generate_quries()
-            return "expected report"
+            await self.perform_research_for_queries(query_response.queries)
+
+            follow_up = await self.generate_followup()
+            if follow_up.should_follow_up and follow_up.queries:
+                await self.perform_research_for_queries(follow_up.queries)
+
+            report = await self.synthesis_report()
+            return report
             
     async def generate_quries(self)->QueryPattern:
         with console.status("[bold cyan]Analysing...[/bold cyan]"):
