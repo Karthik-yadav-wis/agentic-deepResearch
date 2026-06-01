@@ -4,6 +4,7 @@ from research_agents.query_agent import QueryPattern, query_agent
 from research_agents.search_agent import search_agent
 from research_agents.synthasis_agent import synthesis_agent
 from research_agents.follow_up_agent import FollowUpDecisionResponse,follow_up_decision_agent
+from research_agents.db_search_agent import search_db_for_topic
 from rich.console import Console
 from rich.panel import Panel
 from rich.markdown import Markdown
@@ -61,41 +62,31 @@ class ResearchCoordinator:
             search=self.duckduckgo_search(query)
             all_search_results[query]=search
             
-    async def perform_research_for_queries(self, queries: list[str]) -> None:
-
-        # get all of the search results for each query
-        all_search_results = {}
+    async def perform_research_for_queries(self, queries: list[str]):
         for query in queries:
-            search_results = self.duckduckgo_search(query)
-            all_search_results[query] = search_results
+            console.print(f"\n[bold cyan]Searching web:[/bold cyan] {query}")
+            web_results = self.duckduckgo_search(query)
+            for result in web_results:
+                start = time.time()
+                input_text = f"Title: {result['title']}\nURL: {result['href']}"
+                summary = await Runner.run(search_agent, input_text)
+                elapsed = round(time.time() - start, 2)
+                self.search_results.append(SearchResult(
+                    title=result["title"],
+                    url=result["href"],
+                    summary=summary.final_output
+                ))
+                console.print(f"  [green]Web:[/green] {result['title']} ({elapsed}s)")
 
-        for query in queries:
-            console.print(f"\n[bold cyan]Searching for:[/bold cyan] {query}")
-
-            for result in all_search_results[query]:
-                console.print(f"  [green]Result:[/green] {result['title']}")
-                console.print(f"  [dim]URL:[/dim] {result['href']}")
-                console.print(f"  [cyan]Analyzing content...[/cyan]")
-
-                start_analysis_time = time.time()
-                search_input = f"Title: {result['title']}\nURL: {result['href']}"
-                agent_result = await Runner.run(search_agent, input=search_input)
-                analysis_time = time.time() - start_analysis_time
-
-                search_result = SearchResult(
-                    title=result['title'],
-                    url=result['href'],
-                    summary=agent_result.final_output
-                )
-
-                self.search_results.append(search_result)
-
-                summary_preview = agent_result.final_output[:100] + ("..." if len(agent_result.final_output) > 100 else "")
-
-                console.print(f"  [green]Summary:[/green] {summary_preview}")
-                console.print(f"  [dim]Analysis completed in {analysis_time:.2f}s[/dim]\n")
-        
-        console.print(f"\n[bold green]✓ Research round complete![/bold green] Found {len(all_search_results)} sources across {len(queries)} queries.")
+            console.print(f"[bold magenta]Searching books:[/bold magenta] {query}")
+            book_results = search_db_for_topic(query)
+            for result in book_results:
+                self.search_results.append(SearchResult(
+                    title=result["title"],
+                    url=result["url"],
+                    summary=result["summary"]
+                ))
+                console.print(f"  [magenta]Book:[/magenta] {result['title']}")
 
     async def synthesis_report(self) -> str:
          with console.status("[bold cyan]Synthesizing research findings...[/bold cyan]") as status:
